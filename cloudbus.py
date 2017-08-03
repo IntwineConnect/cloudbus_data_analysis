@@ -53,7 +53,25 @@ class cbDevice():
     def getData(self, variable, tstart=None, tend=None):
         """Get data from the CloudBUS device APIs
 
+        Request all reported values of data sent to CloudBUS from this specific
+        device with attribute = variable.  If desired, the time range over which
+        the data was collected can be specified.
+
+        Args:
+            variable: name of the attribute for which to get historical data
+            tstart:   optional datetime of the earliest time for which to request
+                      the specified attribute. Defaults to Unix time of 0.
+            tend:     optional datetime of the most recent time for which to
+                      request the specified attribute. Defaults to tomorrow.
+
+        Returns:
+            A tuple of lists. Element 0 of the tuple is a list of datetimes and
+            element 1 is the list of attibute values at each of the element 0
+            datetime points. The two lists will always be the same length. The
+            lists are sorted so that element 0 of the time list is the earliest
+            reported timestamp.
         """
+
         if tstart is None:
             tstart = dt.datetime.fromtimestamp(0)
         if tend is None:
