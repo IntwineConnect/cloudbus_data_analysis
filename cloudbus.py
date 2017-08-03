@@ -30,6 +30,24 @@ import json
 import datetime as dt
 import sys
 
+CBUS_IP = "54.172.91.188:8080"
+
+
+def get_response(uri):
+    # Python 3 uses a different process to get the response
+    if sys.version_info[0] == 3:
+        with urllib.request.urlopen(uri) as read_url:
+            s = read_url.read()
+        response = s.decode('utf-8')
+    else:
+        read_url = urllib.urlopen(uri)
+        response = ""
+        for line in read_url:
+            response += line
+        read_url.close()
+    return json.loads(response)
+
+
 class cbDevice():
     """CloudBUS Device Class
 
@@ -47,6 +65,7 @@ class cbDevice():
         Args:
             guid: the string representation of the device identifier
         """
+
         assert guid, "GUID can not be empty"
         self.__init__(guid)
 
@@ -78,26 +97,14 @@ class cbDevice():
             tend = dt.datetime.now() + dt.timedelta(days=1)  # tomorrow
 
         # build the CloudBUS URI
-        url = 'http://54.172.91.188:8080/cloudbus/device/'
+        url = 'http://' + CBUS_IP + '/cloudbus/device/'
         query = '/data?attr=%s' % variable
         query += '&start=' + tstart.strftime("%Y-%m-%d %H:%M:%S")
         query += '&end=' + tend.strftime("%Y-%m-%d %H:%M:%S")
         query = query.replace(' ', '%20')
 
-        if sys.version_info[0] == 3:
-            with urllib.request.urlopen(url+self.guid+query) as read_url:
-                s = read_url.read()
-            response = s.decode('utf-8')
-
-        else:
-            # request the URL and read the response
-            read_url = urllib.urlopen(url + self.guid + query)
-            response = ""
-            for line in read_url:
-                response += line
-            read_url.close()
-        
-        resp = json.loads(response)
+        # request the URL and read the response
+        resp = get_response(url + self.guid + query)
 
         # format the data to be returned
         data = dict(resp['data'])
@@ -108,3 +115,37 @@ class cbDevice():
             t_vector.append( dt.datetime.fromtimestamp(float(i[0])/1000.0) )
             y_vector.append( float(i[1]) )
         return t_vector, y_vector
+
+    def getCurrentData(self):
+        """Gets most recently reported data from the device.
+
+        This method will return the most recently reported values for all attributes
+        associated with the device.
+
+        Returns:
+            A dictionary with keys of attribute names. The value associated with
+            each key is a tuple of datetime and attribute value.
+            Note that the attribute value will be a string since we have no way
+            to know the correct data type and things that pass isfloat( ) are
+            inconsistent at best.  See https://stackoverflow.com/questions/379906/parse-string-to-float-or-int
+        """
+
+        # build the CloudBUS URI
+        url = 'http://' + CBUS_IP + '/cloudbus/device/'
+        query = '/currentdata'
+        # request the URL and read the response
+        resp = get_response(url + self.guid + query)
+
+        # format the data to be returned
+        current_data = {}
+        if 'endpoints' not in resp:
+            raise ValueError("'endpoints' not in response")
+
+        for endpoint in resp['endpoints']:
+            for k,v in endpoint.iteritems():
+                if '_time' in k or k == 'endpointId':
+                    continue
+                t = dt.datetime.fromtimestamp(float(endpoint[k + '_time'])/1000.0)
+                current_data[k] = (t, v)
+
+        return current_data
