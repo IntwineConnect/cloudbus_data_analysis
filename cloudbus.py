@@ -48,15 +48,6 @@ def get_response(uri):
     return json.loads(response)
 
 
-def get_response(uri):
-    read_url = urllib.urlopen(uri)
-    response = ""
-    for line in read_url:
-        response += line
-    read_url.close()
-    return json.loads(response)
-
-
 class cbDevice():
     """CloudBUS Device Class
 
