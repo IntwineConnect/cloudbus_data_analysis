@@ -48,9 +48,6 @@ def get_response(uri):
     return json.loads(response)
 
 
-CBUS_IP = "54.172.91.188:8080"
-
-
 def get_response(uri):
     read_url = urllib.urlopen(uri)
     response = ""
