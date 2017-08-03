@@ -28,6 +28,25 @@
 import urllib
 import json
 import datetime as dt
+import sys
+
+CBUS_IP = "54.172.91.188:8080"
+
+
+def get_response(uri):
+    # Python 3 uses a different process to get the response
+    if sys.version_info[0] == 3:
+        with urllib.request.urlopen(uri) as read_url:
+            s = read_url.read()
+        response = s.decode('utf-8')
+    else:
+        read_url = urllib.urlopen(uri)
+        response = ""
+        for line in read_url:
+            response += line
+        read_url.close()
+    return json.loads(response)
+
 
 CBUS_IP = "54.172.91.188:8080"
 
@@ -59,7 +78,7 @@ class cbDevice():
             guid: the string representation of the device identifier
         """
 
-        assert guid is True, "GUID can not be empty"
+        assert guid, "GUID can not be empty"
         self.__init__(guid)
 
     def getData(self, variable, tstart=None, tend=None):
