@@ -28,6 +28,7 @@
 import urllib
 import json
 import datetime as dt
+import sys
 
 class cbDevice():
     """CloudBUS Device Class
@@ -46,8 +47,7 @@ class cbDevice():
         Args:
             guid: the string representation of the device identifier
         """
-
-        assert guid is True, "GUID can not be empty"
+        assert guid, "GUID can not be empty"
         self.__init__(guid)
 
     def getData(self, variable, tstart=None, tend=None):
@@ -84,12 +84,19 @@ class cbDevice():
         query += '&end=' + tend.strftime("%Y-%m-%d %H:%M:%S")
         query = query.replace(' ', '%20')
 
-        # request the URL and read the response
-        read_url = urllib.urlopen(url + self.guid + query)
-        response = ""
-        for line in read_url:
-            response += line
-        read_url.close()
+        if sys.version_info[0] == 3:
+            with urllib.request.urlopen(url+self.guid+query) as read_url:
+                s = read_url.read()
+            response = s.decode('utf-8')
+
+        else:
+            # request the URL and read the response
+            read_url = urllib.urlopen(url + self.guid + query)
+            response = ""
+            for line in read_url:
+                response += line
+            read_url.close()
+        
         resp = json.loads(response)
 
         # format the data to be returned
