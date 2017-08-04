@@ -86,8 +86,10 @@ the data was collected can be specified.</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>variable</strong> – name of the attribute for which to get historical data</li>
-<li><strong>tstart</strong> – optional datetime of the earliest time for which to request the specified attribute. Defaults to Unix time of 0.</li>
-<li><strong>tend</strong> – optional datetime of the most recent time for which to request the specified attribute. Defaults to tomorrow.</li>
+<li><strong>tstart</strong> – optional datetime of the earliest time for which to request
+the specified attribute. Defaults to Unix time of 0.</li>
+<li><strong>tend</strong> – optional datetime of the most recent time for which to request
+the specified attribute. Defaults to tomorrow.</li>
 </ul>
 </td>
 </tr>
@@ -97,6 +99,21 @@ datetime points. The two lists will always be the same length. The
 lists are sorted so that element 0 of the time list is the earliest
 reported timestamp.</p>
 </td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="cloudbus.cbDevice.getDeviceInfo">
+<code class="descname">getDeviceInfo</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cloudbus.cbDevice.getDeviceInfo" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get information about the device</p>
+<p>Request information about the physical device and its reported capabilities.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">A dictionary with all known information about the device.</td>
 </tr>
 </tbody>
 </table>

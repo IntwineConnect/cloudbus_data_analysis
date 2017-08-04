@@ -83,8 +83,10 @@ class cbDevice():
 
         Args:
             variable: name of the attribute for which to get historical data
-            tstart:   optional datetime of the earliest time for which to request the specified attribute. Defaults to Unix time of 0.
-            tend:     optional datetime of the most recent time for which to request the specified attribute. Defaults to tomorrow.
+            tstart:   optional datetime of the earliest time for which to request
+                the specified attribute. Defaults to Unix time of 0.
+            tend:     optional datetime of the most recent time for which to request
+                the specified attribute. Defaults to tomorrow.
 
         Returns:
             A tuple of lists. Element 0 of the tuple is a list of datetimes and
@@ -152,3 +154,17 @@ class cbDevice():
                 current_data[k] = (t, v)
 
         return current_data
+
+    def getDeviceInfo(self):
+        """Get information about the device
+
+        Request information about the physical device and its reported capabilities.
+
+        Returns:
+            A dictionary with all known information about the device.
+        """
+
+        # build the CloudBUS URI
+        url = 'http://' + CBUS_IP + '/cloudbus/device/'
+        # request the URL and read the response
+        return get_response(url + self.guid)
