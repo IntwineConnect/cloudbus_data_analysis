@@ -142,3 +142,66 @@ class cbDevice():
                 current_data[k] = (t, v)
 
         return current_data
+
+class cbGateway(cbDevice):
+    """CloudBUS Gateway device
+    """
+
+    def getDevices(self):
+        """Gets a list of devices that are provisioned to this gateway device.
+
+        This method will return a dictionary with the GUID of all devices that
+        have been provisioned to this gateway.
+
+        Returns:
+            A dictionary of provisioned devices. Each key is a different device's
+            GUID and the associated value is the device type.
+        """
+
+        # build the CloudBUS URI
+        url = 'http://' + CBUS_IP + '/cloudbus/gateway/'
+        # request the URL and read the response
+        resp = get_response(url + self.guid)
+
+        # format the data to be returned
+        devices = {}
+        if 'devices' not in resp:
+            return None
+
+        for device in resp['devices']:
+            devices[device['deviceId']] = device['deviceType']
+
+        return devices
+
+    def getCurrentData(self):
+        """Gets most recently reported data from the gateway.
+
+        This method will return the most recently reported values for all attributes
+        associated with the gateway.
+
+        Returns:
+            A dictionary with keys of attribute names. The value associated with
+            each key is a tuple of datetime and attribute value.
+            Note that the attribute value will be a string since we have no way
+            to know the correct data type and things that pass isfloat( ) are
+            inconsistent at best.  See https://stackoverflow.com/questions/379906/parse-string-to-float-or-int
+        """
+
+        # build the CloudBUS URI
+        url = 'http://' + CBUS_IP + '/cloudbus/device/'
+        query = '/currentdata'
+        # request the URL and read the response
+        resp = get_response(url + self.guid + query)
+
+        # format the data to be returned
+        current_data = {}
+        if 'currentData' not in resp:
+            raise ValueError("'currentData' not in response")
+
+        for k,v in resp['currentData'].iteritems():
+            if '_time' in k or k == 'device_id':
+                continue
+            t = dt.datetime.fromtimestamp(float(resp['currentData'][k + '_time'])/1000.0)
+            current_data[k] = (t, v)
+
+        return current_data
