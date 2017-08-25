@@ -95,6 +95,8 @@ class cbDevice():
             lists are sorted so that element 0 of the time list is the earliest
             reported timestamp.
         """
+        if not self.guid:
+            raise Exception('GUID not defined')
 
         if tstart is None:
             tstart = dt.datetime.fromtimestamp(0)
@@ -134,6 +136,8 @@ class cbDevice():
             to know the correct data type and things that pass isfloat( ) are
             inconsistent at best.  See https://stackoverflow.com/questions/379906/parse-string-to-float-or-int
         """
+        if not self.guid:
+            raise Exception('GUID not defined')
 
         # build the CloudBUS URI
         url = 'http://' + CBUS_IP + '/cloudbus/device/'
@@ -163,6 +167,8 @@ class cbDevice():
         Returns:
             A dictionary with all known information about the device.
         """
+        if not self.guid:
+            raise Exception('GUID not defined')
 
         # build the CloudBUS URI
         url = 'http://' + CBUS_IP + '/cloudbus/device/'
@@ -183,6 +189,8 @@ class cbGateway(cbDevice):
             A dictionary of provisioned devices. Each key is a different device's
             GUID and the associated value is the device type.
         """
+        if not self.guid:
+            raise Exception('GUID not defined')
 
         # build the CloudBUS URI
         url = 'http://' + CBUS_IP + '/cloudbus/gateway/'
@@ -212,6 +220,8 @@ class cbGateway(cbDevice):
             to know the correct data type and things that pass isfloat( ) are
             inconsistent at best.  See https://stackoverflow.com/questions/379906/parse-string-to-float-or-int
         """
+        if not self.guid:
+            raise Exception('GUID not defined')
 
         # build the CloudBUS URI
         url = 'http://' + CBUS_IP + '/cloudbus/device/'
