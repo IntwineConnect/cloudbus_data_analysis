@@ -30,7 +30,7 @@ import json
 import datetime as dt
 import sys
 
-CBUS_IP = "54.172.91.188:8080"
+CBUS_IP = "cbws.intwineconnect.com:8080"
 
 
 def get_response(uri):
