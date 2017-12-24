@@ -89,11 +89,11 @@ class cbDevice():
                 the specified attribute. Defaults to tomorrow.
 
         Returns:
-            A tuple of lists. Element 0 of the tuple is a list of datetimes and
-            element 1 is the list of attibute values at each of the element 0
-            datetime points. The two lists will always be the same length. The
-            lists are sorted so that element 0 of the time list is the earliest
-            reported timestamp.
+            A tuple of lists. Element 0 of the tuple is a list of datetimes
+            (naive but in local time) and element 1 is the list of attibute
+            values at each of the element 0 datetime points. The two lists will
+            always be the same length. The lists are sorted so that element 0 of
+            the time list is the earliest reported timestamp.
         """
         if not self.guid:
             raise Exception('GUID not defined')
@@ -119,6 +119,8 @@ class cbDevice():
         t_vector = []
         y_vector = []
         for i in a:
+            # note that the timestamp is converted to the platform’s local date
+            # and time, and the returned datetime object is naive.
             t_vector.append( dt.datetime.fromtimestamp(float(i[0])/1000.0) )
             y_vector.append( float(i[1]) )
         return t_vector, y_vector
