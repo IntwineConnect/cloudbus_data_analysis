@@ -26,21 +26,44 @@
 ################################################################################
 
 import urllib
+import urllib2
 import json
 import datetime as dt
 import sys
+from base64 import b64encode
 
-CBUS_IP = "cbws.intwineconnect.com:8080"
+#CBUS_IP = "cbws.intwineconnect.com:8080"
+CBUS_IP = '52.11.142.255:8080'
 
+# OAuth2 client information
+GET_TOKEN = "/cloudbus/oauth/token"
+clientId = ""
+apiKey = ""
 
-def get_response(uri):
+def get_oauth_token():
+    creds = b64encode(clientId + ':' + apiKey)
+
+    url = "http://" + CBUS_IP + GET_TOKEN
+    headers = {'Authorization': 'Basic ' + creds}
+    body = urllib.urlencode({'grant_type': 'client_credentials'})
+
+    response = get_response(url, data=body, headers=headers)
+
+    if 'access_token' in response:
+        return json.loads(response)
+    else:
+        return None
+
+def get_response(uri, data=None, headers=None):
     # Python 3 uses a different process to get the response
     if sys.version_info[0] == 3:
         with urllib.request.urlopen(uri) as read_url:
             s = read_url.read()
         response = s.decode('utf-8')
     else:
-        read_url = urllib.urlopen(uri)
+        req = urllib2.Request(uri, headers=headers)
+        if data: req.add_data(data)
+        read_url = urllib2.urlopen(req)
         response = ""
         for line in read_url:
             response += line
@@ -59,10 +82,14 @@ class cbDevice():
 
     guid = None
     data = {}
+    oauth_header = None
 
     def __init__(self, guid=None):
         if guid is not None:
             self.guid = guid
+        token = get_oauth_token()
+        if token:
+            self.oauth_header = {'Authorization': 'Bearer ' + token['access_token']}
 
     def setGUID(self, guid):
         """Assigns the cbDevice a specified guid
@@ -111,7 +138,7 @@ class cbDevice():
         query = query.replace(' ', '%20')
 
         # request the URL and read the response
-        resp = get_response(url + self.guid + query)
+        resp = get_response(url + self.guid + query, headers=self.oauth_header)
 
         # format the data to be returned
         data = dict(resp['data'])
@@ -119,7 +146,7 @@ class cbDevice():
         t_vector = []
         y_vector = []
         for i in a:
-            # note that the timestamp is converted to the platform’s local date
+            # note that the timestamp is converted to the platforms local date
             # and time, and the returned datetime object is naive.
             t_vector.append( dt.datetime.fromtimestamp(float(i[0])/1000.0) )
             y_vector.append( float(i[1]) )
@@ -145,7 +172,7 @@ class cbDevice():
         url = 'http://' + CBUS_IP + '/cloudbus/device/'
         query = '/currentdata'
         # request the URL and read the response
-        resp = get_response(url + self.guid + query)
+        resp = get_response(url + self.guid + query, headers=self.oauth_header)
 
         # format the data to be returned
         current_data = {}
@@ -175,7 +202,7 @@ class cbDevice():
         # build the CloudBUS URI
         url = 'http://' + CBUS_IP + '/cloudbus/device/'
         # request the URL and read the response
-        return get_response(url + self.guid)
+        return get_response(url + self.guid, headers=self.oauth_header)
 
 class cbGateway(cbDevice):
     """CloudBUS Gateway device
@@ -197,7 +224,7 @@ class cbGateway(cbDevice):
         # build the CloudBUS URI
         url = 'http://' + CBUS_IP + '/cloudbus/gateway/'
         # request the URL and read the response
-        resp = get_response(url + self.guid)
+        resp = get_response(url + self.guid, headers=self.oauth_header)
 
         # format the data to be returned
         devices = {}
@@ -229,7 +256,7 @@ class cbGateway(cbDevice):
         url = 'http://' + CBUS_IP + '/cloudbus/device/'
         query = '/currentdata'
         # request the URL and read the response
-        resp = get_response(url + self.guid + query)
+        resp = get_response(url + self.guid + query, headers=self.oauth_header)
 
         # format the data to be returned
         current_data = {}
