@@ -26,10 +26,14 @@
 ################################################################################
 
 import urllib
-import urllib2
+import sys
+
+# Workaround for Python 2 vs 3
+if sys.version_info[0] == 2:
+    import urllib2
+
 import json
 import datetime as dt
-import sys
 from base64 import b64encode
 
 #CBUS_IP = "cbws.intwineconnect.com:8080"
@@ -41,23 +45,37 @@ clientId = ""
 apiKey = ""
 
 def get_oauth_token():
-    creds = b64encode(clientId + ':' + apiKey)
+    data = clientId + ':' + apiKey
 
-    url = "http://" + CBUS_IP + GET_TOKEN
-    headers = {'Authorization': 'Basic ' + creds}
-    body = urllib.urlencode({'grant_type': 'client_credentials'})
+    # Handle differently for Python3
+    if sys.version_info[0] == 3:
+        data_bytes = data.encode("utf-8")
+        creds = b64encode(data_bytes)
+        creds = creds.decode("utf-8")
+        url = "http://" + CBUS_IP + GET_TOKEN
+        headers = {'Authorization': 'Basic ' + creds}
+        body = urllib.parse.urlencode({'grant_type': 'client_credentials'})
+    else:
+        creds = b64encode(data)
+        url = "http://" + CBUS_IP + GET_TOKEN
+        headers = {'Authorization': 'Basic ' + creds}
+        body = urllib.urlencode({'grant_type': 'client_credentials'})
 
     response = get_response(url, data=body, headers=headers)
 
     if 'access_token' in response:
-        return json.loads(response)
+        return response
     else:
         return None
 
 def get_response(uri, data=None, headers=None):
     # Python 3 uses a different process to get the response
     if sys.version_info[0] == 3:
-        req = urllib.request.Request(uri, data=data, headers=headers)
+        req = urllib.request.Request(uri, headers=headers)
+        if data:
+            data_bytes = data.encode("utf-8")
+            req.data = data_bytes
+        # req = urllib.request.Request(uri, data=data, headers=headers)
         with urllib.request.urlopen(req) as read_url:
             s = read_url.read()
         response = s.decode('utf-8')
