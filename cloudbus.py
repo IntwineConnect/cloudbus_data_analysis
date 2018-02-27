@@ -57,7 +57,8 @@ def get_oauth_token():
 def get_response(uri, data=None, headers=None):
     # Python 3 uses a different process to get the response
     if sys.version_info[0] == 3:
-        with urllib.request.urlopen(uri) as read_url:
+        req = urllib.request.Request(uri, data=data, headers=headers)
+        with urllib.request.urlopen(req) as read_url:
             s = read_url.read()
         response = s.decode('utf-8')
     else:
