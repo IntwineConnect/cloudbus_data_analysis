@@ -75,7 +75,6 @@ def get_response(uri, data=None, headers=None):
         if data:
             data_bytes = data.encode("utf-8")
             req.data = data_bytes
-        # req = urllib.request.Request(uri, data=data, headers=headers)
         with urllib.request.urlopen(req) as read_url:
             s = read_url.read()
         response = s.decode('utf-8')
