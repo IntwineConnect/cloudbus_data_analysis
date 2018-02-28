@@ -52,15 +52,14 @@ def get_oauth_token():
         data_bytes = data.encode("utf-8")
         creds = b64encode(data_bytes)
         creds = creds.decode("utf-8")
-        url = "http://" + CBUS_IP + GET_TOKEN
         headers = {'Authorization': 'Basic ' + creds}
         body = urllib.parse.urlencode({'grant_type': 'client_credentials'})
     else:
         creds = b64encode(data)
-        url = "http://" + CBUS_IP + GET_TOKEN
         headers = {'Authorization': 'Basic ' + creds}
         body = urllib.urlencode({'grant_type': 'client_credentials'})
 
+    url = "http://" + CBUS_IP + GET_TOKEN
     response = get_response(url, data=body, headers=headers)
 
     if 'access_token' in response:
