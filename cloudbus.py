@@ -36,8 +36,7 @@ import json
 import datetime as dt
 from base64 import b64encode
 
-#CBUS_IP = "cbws.intwineconnect.com:8080"
-CBUS_IP = '52.11.142.255:8080'
+CBUS_IP = "cbws.intwineconnect.com:8080"
 
 # OAuth2 client information
 GET_TOKEN = "/cloudbus/oauth/token"
