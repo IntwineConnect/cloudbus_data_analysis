@@ -1,5 +1,5 @@
 ################################################################################
-# Copyright (c) 2017                                                           #
+# Copyright (c) 2017-2018                                                      #
 # Intwine Connect, LLC.                                                        #
 #                                                                              #
 # BSD-2-Clause                                                                 #
@@ -36,8 +36,7 @@ import json
 import datetime as dt
 from base64 import b64encode
 
-#CBUS_IP = "cbws.intwineconnect.com:8080"
-CBUS_IP = '52.11.142.255:8080'
+CBUS_IP = "cbws.intwineconnect.com:8080"
 
 # OAuth2 client information
 GET_TOKEN = "/cloudbus/oauth/token"
@@ -166,7 +165,8 @@ class cbDevice():
             # note that the timestamp is converted to the platforms local date
             # and time, and the returned datetime object is naive.
             t_vector.append( dt.datetime.fromtimestamp(float(i[0])/1000.0) )
-            y_vector.append( float(i[1]) )
+            #y_vector.append( float(i[1]) )
+            y_vector.append(i[1])
         return t_vector, y_vector
 
     def getCurrentData(self):
@@ -194,7 +194,13 @@ class cbDevice():
         # format the data to be returned
         current_data = {}
         if 'endpoints' not in resp:
-            raise ValueError("'endpoints' not in response")
+            if 'currentData' in resp:
+                for k,v in resp['currentData'].iteritems():
+                    if '_time' in k or k == 'device_id':
+                        continue
+                    t = dt.datetime.fromtimestamp(float(resp['currentData'][k + '_time'])/1000.0)
+                    current_data[k] = (t, v)
+                return current_data
 
         for endpoint in resp['endpoints']:
             for k,v in endpoint.iteritems():
@@ -287,3 +293,15 @@ class cbGateway(cbDevice):
             current_data[k] = (t, v)
 
         return current_data
+
+    def getNetconfig(self):
+        if not self.guid:
+            raise Exception('GUID not defined')
+
+        # build the CloudBUS URI
+        url = 'http://' + CBUS_IP + '/cloudbus/gateway/'
+        query = '/netconfig?source=device'
+        # request the URL and read the response
+        resp = get_response(url + self.guid + query, headers=self.oauth_header)
+
+        return resp
