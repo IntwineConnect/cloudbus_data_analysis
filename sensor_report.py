@@ -20,10 +20,11 @@ The pdf report generated in placed in a subfolder called pdf.  The filename is
 sensor_report.pdf
 """
 
-def create_title_page(text):
+def create_title_page(text, subtitle=''):
     plt.figure()
     plt.clf()
-    graph = plt.title(text)
+    plt.text(0.5, 0.9, text, horizontalalignment='center', fontsize=14)
+    plt.text(0.5, 0.6, subtitle, horizontalalignment='center', fontsize=10)
     plt.axis('off')
 
 def load_agents():
@@ -45,7 +46,7 @@ output_pdf_file = os.path.join(pdf_folder, 'sensor_report.pdf')
 pp = PdfPages(output_pdf_file)
 
 # Generate Title Page
-create_title_page('Sensor Report - %s'  % (datetime.isoformat(datetime.now())))
+create_title_page('Sensor Report',subtitle=(datetime.isoformat(datetime.now())))
 pp.savefig()
 
 # Generate the details for each device
