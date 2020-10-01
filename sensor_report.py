@@ -21,12 +21,63 @@ sensor_report.pdf
 """
 
 
-def create_title_page(text, subtitle=''):
+def create_title_page(pdf, text, subtitle=''):
     plt.figure()
     plt.clf()
     plt.text(0.5, 0.9, text, horizontalalignment='center', fontsize=14)
     plt.text(0.5, 0.6, subtitle, horizontalalignment='center', fontsize=10)
     plt.axis('off')
+
+    pdf.savefig(plt.gcf())
+    plt.close()
+
+
+def create_text_page(pdf, text):
+    plt.figure()
+    plt.clf()
+    plt.axis('off')
+    y = 1.0
+    for line in text:
+        plt.text(0.0, y, line, fontsize=8)
+        y -= 0.03
+        if y < 0.05:
+            pdf.savefig(plt.gcf())
+            plt.clf()
+            plt.axis('off')
+            y = 1.0
+    pdf.savefig(plt.gcf())
+    plt.close()
+
+
+def create_table_page(pdf, col1, col2, col3, col4, decoration):
+    plt.figure()
+    plt.clf()
+    plt.axis('off')
+    y = 1.0
+    for i in range(0, len(col1)):
+        if decoration[i] is None:
+            weight = 'normal'
+            color  = 'black'
+        elif decoration[i] == 'red':
+            weight = 'normal'
+            color  = 'red'
+        elif decoration[i] == 'bold':
+            weight = 'bold'
+            color  = 'black'
+
+        plt.text(0.0, y, col1[i], fontsize=8, fontweight=weight, color=color)
+        plt.text(0.4, y, col2[i], fontsize=8, fontweight=weight, color=color)
+        plt.text(0.7, y, col3[i], fontsize=8, fontweight=weight, color=color)
+        plt.text(0.9, y, col4[i], fontsize=8, fontweight=weight, color=color)
+
+        y -= 0.03
+        if y < 0.05:
+            pdf.savefig(plt.gcf())
+            plt.clf()
+            plt.axis('off')
+            y = 1.0
+    pdf.savefig(plt.gcf())
+    plt.close()
 
 
 def load_agents():
@@ -49,15 +100,12 @@ output_pdf_file = os.path.join(pdf_folder, 'sensor_report.pdf')
 pp = PdfPages(output_pdf_file)
 
 # Generate Title Page
-create_title_page('Sensor Report',subtitle=(datetime.isoformat(datetime.now())))
-pp.savefig()
+create_title_page(pp, 'Sensor Report',subtitle=(datetime.isoformat(datetime.now())))
 
 # Generate the details for each device
 for device in sensor_agents:
     if device[0] == 'title':
-        create_title_page(device[1])
-        pp.savefig(plt.gcf())
-        plt.close()
+        create_title_page(pp, device[1])
         continue
 
     print device
@@ -89,4 +137,64 @@ for device in sensor_agents:
 
     plt.close()  # Close the plot - pyplot doesn't like having lots open
 
-pp.close()  # close and finalize the pdf file
+# Generate Battery Summary
+print "Running Battery Summary..."
+create_title_page(pp, 'Battery Summary')
+col1 = []
+col2 = []
+col3 = []
+col4 = []
+alert = []
+for device in sensor_agents:
+    if device[0] == 'title':
+        col1.append('')
+        col1.append(device[1])
+        col2.append('')
+        col2.append('Last Full')
+        col3.append('')
+        col3.append('Current %')
+        col4.append('')
+        col4.append('Est. Life')
+        alert.append(None)
+        alert.append('bold')
+        continue
+
+    myDevice = cbDevice(device[0])
+    xlist, ylist = myDevice.getData('battery_remaining')
+    y = [float(y) for y in ylist]
+    try:
+        last_full_i = next(i for i in reversed(range(len(y))) if y[i] > 0.999)
+        last_full = xlist[last_full_i]
+        last_full_str = last_full.strftime("%Y/%m/%d")
+        current = y[-1]
+
+        if current < 0.98:
+            est_life = ((xlist[-1] - last_full).total_seconds()) / (1.0 - y[-1]) / (60.0*60.0*24.0*365.0/12.0)
+            est_life_str = "%.2f months" % est_life
+        else:
+            est_life_str = 'Need more data'
+    except:
+        last_full_str = 'Unknown'
+        est_life_str = 'Unknown'
+
+    try:
+        current = y[-1]
+        if current < 0.05:
+            alert.append('red')
+        else:
+            alert.append(None)
+    except:
+        current = 'Unknown'
+        alert.append(None)
+
+    col1.append(device[2])
+    col2.append("%s" % (last_full_str,))
+    col3.append(current)
+    col4.append(est_life_str)
+
+
+create_table_page(pp, col1, col2, col3, col4, alert)
+
+
+# close and finalize the pdf file
+pp.close()
