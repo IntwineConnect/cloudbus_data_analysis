@@ -57,7 +57,7 @@ for device in sensor_agents:
 
         myDevice = cbDevice(device[0])
 
-        attr_list = ['temperature','rssi','battery_remaining']
+        attr_list = ['temperature','humidity','rssi','battery_remaining']
 
         fig, axs = plt.subplots(len(attr_list), sharex=True)
         fig.suptitle("%s - %s" % (device[3], device[2]))
