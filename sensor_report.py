@@ -21,9 +21,17 @@ sensor_report.pdf
 """
 
 
-def create_title_page(pdf, text, subtitle=''):
+def create_fig():
+    # NOTE: matplotlib retains a global reference to the current figure
+    # this means we don't need to pass the resulting object around
     plt.figure()
+    fig = plt.gcf()
+    fig.set_size_inches(8.5, 11)
     plt.clf()
+
+
+def create_title_page(pdf, text, subtitle=''):
+    create_fig()
     plt.text(0.5, 0.9, text, horizontalalignment='center', fontsize=14)
     plt.text(0.5, 0.6, subtitle, horizontalalignment='center', fontsize=10)
     plt.axis('off')
@@ -33,8 +41,8 @@ def create_title_page(pdf, text, subtitle=''):
 
 
 def create_text_page(pdf, text):
-    plt.figure()
-    plt.clf()
+    create_fig()
+
     plt.axis('off')
     y = 1.0
     for line in text:
@@ -50,8 +58,8 @@ def create_text_page(pdf, text):
 
 
 def create_table_page(pdf, col1, col2, col3, col4, decoration):
-    plt.figure()
-    plt.clf()
+    create_fig()
+
     plt.axis('off')
     y = 1.0
     for i in range(0, len(col1)):
@@ -70,8 +78,8 @@ def create_table_page(pdf, col1, col2, col3, col4, decoration):
         plt.text(0.7, y, col3[i], fontsize=8, fontweight=weight, color=color)
         plt.text(0.9, y, col4[i], fontsize=8, fontweight=weight, color=color)
 
-        y -= 0.03
-        if y < 0.05:
+        y -= 0.02
+        if y < 0.02:
             pdf.savefig(plt.gcf())
             plt.clf()
             plt.axis('off')
@@ -114,23 +122,29 @@ for device in sensor_agents:
 
     attr_list = ['temperature', 'humidity', 'rssi', 'battery_remaining']
 
-    fig, axs = plt.subplots(len(attr_list), sharex=True)
+    create_fig()
+    fig = plt.gcf()
     fig.suptitle("%s - %s" % (device[3], device[2]))
 
+    ax = []
     i = 0
     for attr in attr_list:
-
+        if len(ax) == 0:
+            ax.append(plt.subplot(len(attr_list), 1, i+1))
+        else:
+            ax.append(plt.subplot(len(attr_list), 1, i+1, sharex=ax[0]))
         xlist, ylist = myDevice.getData(attr, tstart, tend)
         y = [float(y) for y in ylist]
-        axs[i].plot(xlist, y, "-", alpha=0.5)
-        axs[i].set(ylabel=attr)
+        ax[i].plot(xlist, y, "-", alpha=0.5)
+        ax[i].set(ylabel=attr)
+        if i+1 == len(attr_list):
+            ax[i].set(xlabel='Date')
         if attr == 'battery_remaining':
             if len(y) > 0:
                 # call out the actual battery remaining value
-                plt.annotate(y[-1], (xlist[-1],y[-1]))
+                plt.annotate(y[-1], (xlist[-1], y[-1]))
         i += 1
 
-    axs[-1].set(xlabel='Date')
     fig.autofmt_xdate()     # cleans up the x-axis tick marks
 
     pp.savefig(plt.gcf())  # This generates pdf page and appends it to the file
