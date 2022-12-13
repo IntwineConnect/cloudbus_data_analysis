@@ -1,5 +1,5 @@
 ################################################################################
-# Copyright (c) 2017-2018                                                      #
+# Copyright (c) 2017-2022                                                      #
 # Intwine Connect, LLC.                                                        #
 #                                                                              #
 # BSD-2-Clause                                                                 #
@@ -25,7 +25,7 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                                   #
 ################################################################################
 
-import urllib
+from urllib import parse, request
 import sys
 
 # Workaround for Python 2 vs 3
@@ -44,41 +44,53 @@ clientId = ""
 apiKey = ""
 
 def get_oauth_token():
-    data = clientId + ':' + apiKey
+    data = clientId + ":" + apiKey
 
     # Handle differently for Python3
     if sys.version_info[0] == 3:
         data_bytes = data.encode("utf-8")
         creds = b64encode(data_bytes)
         creds = creds.decode("utf-8")
-        headers = {'Authorization': 'Basic ' + creds}
-        body = urllib.parse.urlencode({'grant_type': 'client_credentials'})
+        headers = {"Authorization": "Basic " + creds}
+        body = parse.urlencode({"grant_type": "client_credentials"})
     else:
         creds = b64encode(data)
-        headers = {'Authorization': 'Basic ' + creds}
-        body = urllib.urlencode({'grant_type': 'client_credentials'})
+        headers = {"Authorization": "Basic " + creds}
+        body = urllib.urlencode({"grant_type": "client_credentials"})
 
     url = "http://" + CBUS_IP + GET_TOKEN
     response = get_response(url, data=body, headers=headers)
 
-    if 'access_token' in response:
+    if "access_token" in response:
         return response
     else:
         return None
 
-def get_response(uri, data=None, headers=None):
+
+def get_response(uri, data=None, headers=None, method=None):
     # Python 3 uses a different process to get the response
     if sys.version_info[0] == 3:
-        req = urllib.request.Request(uri, headers=headers)
-        if data:
+        if method is None:
+            req = request.Request(uri, headers=headers)
+        else:
+            req = request.Request(uri, headers=headers, method=method)
+
+        if isinstance(data, str):
             data_bytes = data.encode("utf-8")
             req.data = data_bytes
-        with urllib.request.urlopen(req) as read_url:
+        if isinstance(data, dict):
+            req.add_header("Content-Type", "application/json; charset=utf-8")
+            jsondata = json.dumps(data)
+            jsondataasbytes = jsondata.encode("utf-8")  # needs to be bytes
+            req.add_header("Content-Length", len(jsondataasbytes))
+            req.data = jsondataasbytes
+        with request.urlopen(req, timeout=120) as read_url:
             s = read_url.read()
-        response = s.decode('utf-8')
+        response = s.decode("utf-8")
     else:
         req = urllib2.Request(uri, headers=headers)
-        if data: req.add_data(data)
+        if data:
+            req.add_data(data)
         read_url = urllib2.urlopen(req)
         response = ""
         for line in read_url:
@@ -87,7 +99,7 @@ def get_response(uri, data=None, headers=None):
     return json.loads(response)
 
 
-class cbDevice():
+class cbDevice:
     """CloudBUS Device Class
 
     The cbDevice class enables users to interrogate the Intwine CloudBUS IoT server
@@ -105,7 +117,9 @@ class cbDevice():
             self.guid = guid
         token = get_oauth_token()
         if token:
-            self.oauth_header = {'Authorization': 'Bearer ' + token['access_token']}
+            self.oauth_header = {
+                "Authorization": "Bearer " + token["access_token"]
+            }
 
     def setGUID(self, guid):
         """Assigns the cbDevice a specified guid
@@ -139,7 +153,7 @@ class cbDevice():
             the time list is the earliest reported timestamp.
         """
         if not self.guid:
-            raise Exception('GUID not defined')
+            raise Exception("GUID not defined")
 
         if tstart is None:
             tstart = dt.datetime.fromtimestamp(0)
@@ -147,25 +161,25 @@ class cbDevice():
             tend = dt.datetime.now() + dt.timedelta(days=1)  # tomorrow
 
         # build the CloudBUS URI
-        url = 'http://' + CBUS_IP + '/cloudbus/device/'
-        query = '/data?attr=%s' % variable
-        query += '&start=' + tstart.strftime("%Y-%m-%d %H:%M:%S")
-        query += '&end=' + tend.strftime("%Y-%m-%d %H:%M:%S")
-        query = query.replace(' ', '%20')
+        url = "http://" + CBUS_IP + "/cloudbus/device/"
+        query = "/data?attr=%s" % variable
+        query += "&start=" + tstart.strftime("%Y-%m-%d %H:%M:%S")
+        query += "&end=" + tend.strftime("%Y-%m-%d %H:%M:%S")
+        query = query.replace(" ", "%20")
 
         # request the URL and read the response
         resp = get_response(url + self.guid + query, headers=self.oauth_header)
 
         # format the data to be returned
-        data = dict(resp['data'])
+        data = dict(resp["data"])
         a = sorted(data.items())
         t_vector = []
         y_vector = []
         for i in a:
             # note that the timestamp is converted to the platforms local date
             # and time, and the returned datetime object is naive.
-            t_vector.append( dt.datetime.fromtimestamp(float(i[0])/1000.0) )
-            #y_vector.append( float(i[1]) )
+            t_vector.append(dt.datetime.fromtimestamp(float(i[0]) / 1000.0))
+            # y_vector.append( float(i[1]) )
             y_vector.append(i[1])
         return t_vector, y_vector
 
@@ -183,30 +197,38 @@ class cbDevice():
             inconsistent at best.  See https://stackoverflow.com/questions/379906/parse-string-to-float-or-int
         """
         if not self.guid:
-            raise Exception('GUID not defined')
+            raise Exception("GUID not defined")
 
         # build the CloudBUS URI
-        url = 'http://' + CBUS_IP + '/cloudbus/device/'
-        query = '/currentdata'
+        url = "http://" + CBUS_IP + "/cloudbus/device/"
+        query = "/currentdata"
         # request the URL and read the response
         resp = get_response(url + self.guid + query, headers=self.oauth_header)
 
         # format the data to be returned
         current_data = {}
-        if 'endpoints' not in resp:
-            if 'currentData' in resp:
-                for k,v in resp['currentData'].iteritems():
-                    if '_time' in k or k == 'device_id':
-                        continue
-                    t = dt.datetime.fromtimestamp(float(resp['currentData'][k + '_time'])/1000.0)
-                    current_data[k] = (t, v)
-                return current_data
+        if "endpoints" not in resp:
+            if "currentData" in resp:
+                try:
+                    for k, v in resp["currentData"].items():
+                        if "_time" in k or k == "device_id":
+                            continue
+                        t = dt.datetime.fromtimestamp(
+                            float(resp["currentData"][k + "_time"]) / 1000.0
+                        )
+                        current_data[k] = (t, v)
+                    return current_data
+                except AttributeError as e:
+                    print("Attribute error: %s" % e)
+                    return None
 
-        for endpoint in resp['endpoints']:
-            for k,v in endpoint.iteritems():
-                if '_time' in k or k == 'endpointId':
+        for endpoint in resp["endpoints"]:
+            for k, v in endpoint.iteritems():
+                if "_time" in k or k == "endpointId":
                     continue
-                t = dt.datetime.fromtimestamp(float(endpoint[k + '_time'])/1000.0)
+                t = dt.datetime.fromtimestamp(
+                    float(endpoint[k + "_time"]) / 1000.0
+                )
                 current_data[k] = (t, v)
 
         return current_data
@@ -220,16 +242,37 @@ class cbDevice():
             A dictionary with all known information about the device.
         """
         if not self.guid:
-            raise Exception('GUID not defined')
+            raise Exception("GUID not defined")
 
         # build the CloudBUS URI
-        url = 'http://' + CBUS_IP + '/cloudbus/device/'
+        url = "http://" + CBUS_IP + "/cloudbus/device/"
         # request the URL and read the response
         return get_response(url + self.guid, headers=self.oauth_header)
 
+
 class cbGateway(cbDevice):
-    """CloudBUS Gateway device
-    """
+    """CloudBUS Gateway device"""
+
+    def getConnectionStatus(self):
+        """Gets current connection status of the gateway
+
+        This method will return a dictionary with the parameters
+
+        Returns:
+            A dictionary of provisioned devices. Each key is a different device's
+            GUID and the associated value is the device type.
+        """
+        if not self.guid:
+            raise Exception("GUID not defined")
+
+        # build the CloudBUS URI
+        url = "http://" + CBUS_IP + "/cloudbus/v1/group/gatewayConnectStatus"
+        # request the URL and read the response
+        resp = get_response(
+            url + "?gatewayId=" + self.guid, headers=self.oauth_header
+        )
+
+        return resp[0]["connectionStatus"] == "true"
 
     def getDevices(self):
         """Gets a list of devices that are provisioned to this gateway device.
@@ -242,20 +285,20 @@ class cbGateway(cbDevice):
             GUID and the associated value is the device type.
         """
         if not self.guid:
-            raise Exception('GUID not defined')
+            raise Exception("GUID not defined")
 
         # build the CloudBUS URI
-        url = 'http://' + CBUS_IP + '/cloudbus/gateway/'
+        url = "http://" + CBUS_IP + "/cloudbus/gateway/"
         # request the URL and read the response
         resp = get_response(url + self.guid, headers=self.oauth_header)
 
         # format the data to be returned
         devices = {}
-        if 'devices' not in resp:
+        if "devices" not in resp:
             return None
 
-        for device in resp['devices']:
-            devices[device['deviceId']] = device['deviceType']
+        for device in resp["devices"]:
+            devices[device["deviceId"]] = device["deviceType"]
 
         return devices
 
@@ -273,35 +316,51 @@ class cbGateway(cbDevice):
             inconsistent at best.  See https://stackoverflow.com/questions/379906/parse-string-to-float-or-int
         """
         if not self.guid:
-            raise Exception('GUID not defined')
+            raise Exception("GUID not defined")
 
         # build the CloudBUS URI
-        url = 'http://' + CBUS_IP + '/cloudbus/device/'
-        query = '/currentdata'
+        url = "http://" + CBUS_IP + "/cloudbus/device/"
+        query = "/currentdata"
         # request the URL and read the response
         resp = get_response(url + self.guid + query, headers=self.oauth_header)
 
         # format the data to be returned
         current_data = {}
-        if 'currentData' not in resp:
+        if "currentData" not in resp:
             raise ValueError("'currentData' not in response")
 
-        for k,v in resp['currentData'].iteritems():
-            if '_time' in k or k == 'device_id':
+        for k, v in resp["currentData"].items():
+            if "_time" in k or k == "device_id":
                 continue
-            t = dt.datetime.fromtimestamp(float(resp['currentData'][k + '_time'])/1000.0)
+            t = dt.datetime.fromtimestamp(
+                float(resp["currentData"][k + "_time"]) / 1000.0
+            )
             current_data[k] = (t, v)
 
         return current_data
 
-    def getNetconfig(self):
+    def getMetaData(self):
         if not self.guid:
-            raise Exception('GUID not defined')
+            raise Exception("GUID not defined")
 
         # build the CloudBUS URI
-        url = 'http://' + CBUS_IP + '/cloudbus/gateway/'
-        query = '/netconfig?source=device'
+        url = "http://" + CBUS_IP + "/cloudbus/v2/gateway/" + self.guid
+        # request the URL and read the response
+        resp = get_response(url, headers=self.oauth_header)
+
+        return resp
+
+    def getNetconfig(self):
+        if not self.guid:
+            raise Exception("GUID not defined")
+
+        # build the CloudBUS URI
+        url = "http://" + CBUS_IP + "/cloudbus/gateway/"
+        query = "/netconfig?source=device"
         # request the URL and read the response
         resp = get_response(url + self.guid + query, headers=self.oauth_header)
+
+        if "networkConfigString" in resp:
+            return json.loads(resp.get("networkConfigString"))
 
         return resp
